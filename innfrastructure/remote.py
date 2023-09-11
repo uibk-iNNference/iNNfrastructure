@@ -4,7 +4,10 @@ import invoke
 from invoke import UnexpectedExit
 from paramiko.ssh_exception import NoValidConnectionsError
 
+
 def update_host_keys(host: str):
+    """Update host keys for a given host.
+    Avoids issues with later SSH connections and strict host key verification."""
     for i in range(10):
         try:
             # fix hostkeys
@@ -18,5 +21,3 @@ def update_host_keys(host: str):
             )
             sleep(15)
             continue
-
-

@@ -15,6 +15,11 @@ AWS_IMAGE_ID = "ami-0acb218a9a0302218"
 
 @dataclass
 class AwsInstanceConfiguration:
+    """
+    Container class for information required by
+    https://docs.aws.amazon.com/cli/latest/reference/ec2/run-instances.html
+    """
+
     name: str  # set as tag, as actual hostname setting isn't really possible
     instance_type: str
     spot_instance: bool = False
@@ -23,15 +28,17 @@ class AwsInstanceConfiguration:
     security_group: str = "open"
 
     def get_command(self):
-        command = " ".join([
-            "aws ec2 run-instances",
-            f"--image-id {self.image_id}",
-            f"--instance-type {self.instance_type}",
-            f"--key {self.key_name}",
-            f"--security-group-ids {self.security_group}",
-            f"--tag-specifications 'ResourceType=instance,Tags=[{{Key=name,Value={self.name}}}]'",
-            f"--iam-instance-profile Name=ecr_access"
-        ])
+        command = " ".join(
+            [
+                "aws ec2 run-instances",
+                f"--image-id {self.image_id}",
+                f"--instance-type {self.instance_type}",
+                f"--key {self.key_name}",
+                f"--security-group-ids {self.security_group}",
+                f"--tag-specifications 'ResourceType=instance,Tags=[{{Key=name,Value={self.name}}}]'",
+                f"--iam-instance-profile Name=ecr_access",
+            ]
+        )
         return command
 
 
@@ -58,7 +65,9 @@ _CONFIGS = [
     AwsInstanceConfiguration("p4d.24xlarge", "p4d.24xlarge"),
 ]
 # noinspection DuplicatedCode
-AWS_CONFIGS: Dict[str, AwsInstanceConfiguration] = {config.name: config for config in _CONFIGS}
+AWS_CONFIGS: Dict[str, AwsInstanceConfiguration] = {
+    config.name: config for config in _CONFIGS
+}
 
 
 def create_instance(instance_config: AwsInstanceConfiguration):
@@ -68,6 +77,8 @@ def create_instance(instance_config: AwsInstanceConfiguration):
 
 @dataclass
 class AwsInstanceInfo:
+    """Contains information about an existing AWS instance"""
+
     id: str
     ip: str
     name: str
@@ -84,17 +95,19 @@ def get_running_instances():
     for reservation in result["Reservations"]:
         for instance in reservation["Instances"]:
             ip = instance["NetworkInterfaces"][0]["Association"]["PublicIp"]
-            instance_type = instance['InstanceType']
+            instance_type = instance["InstanceType"]
             id = instance["InstanceId"]
 
             name = None
             try:
-                for tag in instance['Tags']:
-                    if tag['Key'] == 'name':
-                        name = tag['Value']
+                for tag in instance["Tags"]:
+                    if tag["Key"] == "name":
+                        name = tag["Value"]
                         break
             except KeyError:
-                logger.warning(f"Untagged instance of type {instance_type} found at IP {ip}")
+                logger.warning(
+                    f"Untagged instance of type {instance_type} found at IP {ip}"
+                )
 
             instance_infos.append(AwsInstanceInfo(id, ip, name, instance_type))
 
@@ -108,14 +121,17 @@ def delete_instance(instance: AwsInstanceInfo):
 
 def delete_instances(instances: [AwsInstanceInfo]):
     cmd = f"aws ec2 terminate-instances --instance-ids "
-    cmd += ' ' + ' '.join([instance.id for instance in instances])
+    cmd += " " + " ".join([instance.id for instance in instances])
     invoke.run(cmd)
 
 
 def ensure_configs_running(config_names: Iterable[str]):
+    """Ensure that cloud configurations with the given names are running."""
     instances = get_running_instances()
     instance_names = [instance.name for instance in instances]
-    missing_configs = [config_name for config_name in config_names if config_name not in instance_names]
+    missing_configs = [
+        config_name for config_name in config_names if config_name not in instance_names
+    ]
 
     for missing_config in missing_configs:
         command = AWS_CONFIGS[missing_config].get_command()
@@ -123,7 +139,11 @@ def ensure_configs_running(config_names: Iterable[str]):
 
 
 def cleanup_configs(config_names: List[str]):
-    instances = [instance for instance in get_running_instances() if instance.name in config_names]
+    instances = [
+        instance
+        for instance in get_running_instances()
+        if instance.name in config_names
+    ]
     delete_instances(instances)
 
 
@@ -132,31 +152,51 @@ DOCKER_ARGUMENTS = [
     "--name forennsic",
     "-v /tmp:/tmp",
     "-it",
-    "457863446379.dkr.ecr.eu-central-1.amazonaws.com/forennsic:latest"
+    "457863446379.dkr.ecr.eu-central-1.amazonaws.com/forennsic:latest",
 ]
 
-DOCKER_GPU_ARGUMENTS = [
-    "--gpus all"
-]
+DOCKER_GPU_ARGUMENTS = ["--gpus all"]
 
 
 class AwsConnection(fabric.Connection):
-    def __init__(self, host, user="ec2-user", port=None, config=None, gateway=None, forward_agent=None,
-                 connect_timeout=None,
-                 connect_kwargs=None, inline_ssh_env=None, setup=True):
+    """Wraps fabric connection to allow for dockerized commands."""
+
+    def __init__(
+        self,
+        host,
+        user="ec2-user",
+        port=None,
+        config=None,
+        gateway=None,
+        forward_agent=None,
+        connect_timeout=None,
+        connect_kwargs=None,
+        inline_ssh_env=None,
+        setup=True,
+    ):
         if connect_kwargs is None:
             connect_kwargs = {}
         if "key_filename" not in connect_kwargs:
             connect_kwargs["key_filename"] = "/home/alex/.ssh/aws.pem"
-        super().__init__(host, user, port, config, gateway, forward_agent, connect_timeout, connect_kwargs,
-                         inline_ssh_env)
+        super().__init__(
+            host,
+            user,
+            port,
+            config,
+            gateway,
+            forward_agent,
+            connect_timeout,
+            connect_kwargs,
+            inline_ssh_env,
+        )
 
         if setup:
-            self.run('sudo yum install -y amazon-ecr-credential-helper')
-            self.run('mkdir -p ~/.docker')
+            self.run("sudo yum install -y amazon-ecr-credential-helper")
+            self.run("mkdir -p ~/.docker")
             self.run(
                 'echo \'{"credHelpers": {"457863446379.dkr.ecr.eu-central-1.amazonaws.com": "ecr-login"}}\' '
-                '> ~/.docker/config.json')
+                "> ~/.docker/config.json"
+            )
         try:
             self.run("docker container rm -f forennsic")
         except UnexpectedExit:

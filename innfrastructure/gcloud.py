@@ -27,6 +27,7 @@ def _add_default_arguments(current_args: Dict):
 
 
 class GcloudInstanceConfig:
+    """Contains information required for creating a gcloud instance"""
     def __init__(self, name: str, zone: str, **kwargs):
         self.name = name
         self.zone = zone
@@ -178,6 +179,7 @@ def create_instance(instance_config: GcloudInstanceConfig):
 
 @dataclass
 class GcloudInstanceInfo:
+    """Contains information about an existing GCloud instance"""
     name: str
     ip: str
     zone: str
@@ -241,6 +243,7 @@ def delete_instance(instance_config: Union[GcloudInstanceConfig, GcloudInstanceI
 
 
 def ensure_configs_running(config_names: Iterable[str]):
+    """Ensure that cloud configurations with the given names are running."""
     instances = get_instances()
     instance_names = [instance.name for instance in instances]
     missing_configs = [
@@ -296,6 +299,7 @@ DOCKER_GPU_ARGUMENTS = [
 
 
 class GcloudConnection(fabric.Connection):
+    """Wraps fabric connection to allow for dockerized commands"""
     def __init__(
         self,
         host,

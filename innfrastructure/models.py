@@ -7,6 +7,7 @@ models = {}
 
 
 def get_model(model_type: str) -> keras.models.Sequential:
+    """Load a model with some caching."""
     if model_type not in models.keys():
         models[model_type] = keras.models.load_model(
             os.path.join(cfg.MODEL_DIR, f"{model_type}.h5")

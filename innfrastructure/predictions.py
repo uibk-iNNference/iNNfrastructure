@@ -37,6 +37,8 @@ def predict(
     samples: np.ndarray,
     disseminate_batches: bool = True,
 ):
+    """Predict sample.
+    If disseminate_batches is True, samples are inferred one by one."""
 
     model = models.get_model(model_type)
 

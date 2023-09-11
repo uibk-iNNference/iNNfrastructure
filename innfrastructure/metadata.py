@@ -14,6 +14,7 @@ get_hostname = socket.gethostname
 
 
 def convert_np_to_json(array: np.ndarray) -> dict:
+    """Convert numpy ndarray to base64 encoded buffer, retain dtype and shape in json dict"""
     if array is None:
         return None
 
@@ -25,6 +26,7 @@ def convert_np_to_json(array: np.ndarray) -> dict:
 
 
 def convert_json_to_np(encoded_array: dict) -> np.ndarray:
+    """Convert json dict to numpy ndarray, see convert_np_to_jsons"""
     if encoded_array is None:
         return None
     byte_string = encoded_array["bytes"]
@@ -44,6 +46,7 @@ def get_devices() -> List[str]:
 
 
 def get_device_info(device: Union[str, None]) -> Union[None, Dict[str, str]]:
+    """Get additional information about a device. Returns None if device is None or not found."""
     if device is None:
         return None
 
@@ -88,11 +91,11 @@ def get_commit() -> str:
 def clean_gpu_name(gpu_name):
     brand = "NVIDIA "
     if gpu_name.startswith(brand):
-        gpu_name = gpu_name[len(brand):]
+        gpu_name = gpu_name[len(brand) :]
 
     partial_prefix = "GeForce "
     if gpu_name.startswith(partial_prefix):
-        gpu_name = gpu_name[len(partial_prefix):]
+        gpu_name = gpu_name[len(partial_prefix) :]
 
     return gpu_name
 
@@ -123,6 +126,7 @@ def get_clean_device_name(result):
 
 
 def get_stack_info() -> Union[None, Dict[str, Union[str, None]]]:
+    """Collect information about NVidia CUDA and driver version."""
     # get information from nvidia-smi
     result = run("nvidia-smi -q", hide=True, warn=True)
     if result.return_code != 0:
@@ -200,11 +204,13 @@ CORE_SPLITS = [
 
 
 def extract_cpu_stats(result: Dict):
-    if result['device_type'] == 'gpu':
-        return result['device_name']
+    """Extract relevant CPU stats from cpuinfo result.
+    Includes subset of flags and binned core count."""
+    if result["device_type"] == "gpu":
+        return result["device_name"]
 
     # gb = round(result['memory']['total'] / 10 ** 9)
-    core_count = result['cpu_info']['count']
+    core_count = result["cpu_info"]["count"]
     core_split = None
     for i, split in enumerate(CORE_SPLITS):
         if core_count >= split:
@@ -212,13 +218,14 @@ def extract_cpu_stats(result: Dict):
         else:
             break
 
-    flags = frozenset(result['cpu_info']['flags'])
+    flags = frozenset(result["cpu_info"]["flags"])
     filtered_flags = flags & RELEVANT_FLAGS
     cpu_stat = (filtered_flags, core_split)
     return cpu_stat
 
 
 def get_winning_algorithm(operations: List, return_operation: bool = False) -> str:
+    """Get the winning algorithm from a list of operations from TF profiler"""
     convolution_regexes = {
         re.compile(r"explicit_convolve_sgemm"): "explicit sgemm",
         re.compile(r"implicit_convolve_sgemm"): "implicit sgemm",
@@ -226,14 +233,18 @@ def get_winning_algorithm(operations: List, return_operation: bool = False) -> s
         re.compile(r"conv2d_grouped_direct_kernel"): "grouped naive kernel",
         re.compile(r"fft2d_c2r"): "FFT gemm",
         re.compile(r"cudnn_convolve_sgemm_sm35"): "Kepler implicit sgemm",
-        re.compile(r"cudnn_convolve_precomputed_sgemm_sm35"): "Kepler precomputed sgemm",
+        re.compile(
+            r"cudnn_convolve_precomputed_sgemm_sm35"
+        ): "Kepler precomputed sgemm",
         re.compile(r"maxwell_scudnn_winograd"): "Maxwell Winograd",
         re.compile(r"maxwell_sgemm"): "Maxwell Winograd nonfused",
         re.compile(r"gemmSN_NN_kernel"): "Turing Winograd nonfused",
         re.compile(r"volta_scudnn_winograd"): "Volta compiled winograd",
         re.compile(r"volta_scudnn_[\dx]+_relu"): "Volta fused conv/ReLU",
         re.compile(r"volta_sgemm"): "Volta nonfused Winograd",
-        re.compile(r"xmma_cudnn::gemm::kernel<xmma_cudnn::implicit_gemm"): "Ampere implicit gemm",
+        re.compile(
+            r"xmma_cudnn::gemm::kernel<xmma_cudnn::implicit_gemm"
+        ): "Ampere implicit gemm",
         re.compile(r"xmma_fprop_implicit_gemm"): "Ampere fprop implicit gemm",
         re.compile(r"ampere_scudnn_winograd"): "Ampere Winograd",
     }
@@ -242,7 +253,7 @@ def get_winning_algorithm(operations: List, return_operation: bool = False) -> s
     matching_operation = None
 
     for operation, (regex, alg_name) in itertools.product(
-            operations, convolution_regexes.items()
+        operations, convolution_regexes.items()
     ):
         regex_match = regex.search(operation)
         if regex_match is not None:
