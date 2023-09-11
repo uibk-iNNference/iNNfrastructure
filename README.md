@@ -18,6 +18,8 @@ Afterwards, install the package using `pip install .`
 We provide the `innfcli` command for quick and standardized prediction.
 For usage, please see the [foreNNsic experiment repository](TODO) and the run files there.
 
+The CLI only includes code to interact with GCP. If you want to use AWS, you need to use the API directly. Our experiments mostly use the `ensure_configs_running` function from both GCP and AWS modules.
+
 ### API
 
 The API is provided by the `innfrastructure` package.
