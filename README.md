@@ -1,8 +1,8 @@
 # iNNfrastructure
 
-this is the infrastructure of iNNformant and related cloud stuff.
+This is the infrastructure of our NeurIPS paper, and handles the cloud orchestration as well as the inference used for our experiments.
 This is research code, and may or may not work.
-If you have any questions, please contact [Alex](github.com/alxshine).
+If you have any questions, please contact [Alex](https://github.com/alxshine).
 
 ## Installation
 
